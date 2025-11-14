@@ -49,7 +49,7 @@ bool CPackManager::IsExist(std::string_view path) const
 	}
 }
 
-void CPackManager::NormalizePath(std::string_view in, std::string& out) const
+PACK_FORCEINLINE void CPackManager::NormalizePath(std::string_view in, std::string& out) const
 {
 	out.resize(in.size());
 	for (std::size_t i = 0; i < out.size(); ++i) {
