@@ -1,27 +1,31 @@
 #include "Pack.h"
 #include <zstd.h>
 
-bool CPack::Open(const std::string& path, TPackFileMap& entries)
+bool CPack::Open(const std::string& path, TPackFileMap& entries)		  
 {
 	std::error_code ec;
 	m_file.map(path, ec);
-	
+
 	if (ec) {
 		return false;
 	}
-
 	size_t file_size = m_file.size();
 	if (file_size < sizeof(TPackFileHeader)) {
 		return false;
 	}
 
 	memcpy(&m_header, m_file.data(), sizeof(TPackFileHeader));
-	m_decryption.SetKeyWithIV(PACK_KEY.data(), PACK_KEY.size(), m_header.iv, CryptoPP::Camellia::BLOCKSIZE);
+	alignas(32) uint8_t decrypted_key[32];
+	memcpy(decrypted_key, PACK_KEY.data(), 32);
+	compiletime_key_generation::decrypt_key<32>(decrypted_key, PACK_SEED_HASH);
+
+	m_decryption.SetKeyWithIV(decrypted_key, 32, m_header.iv, CryptoPP::AES::BLOCKSIZE);  // it can be easyly hooked RTTI in binary shows it so extracting keys is still easy but not for begginers BEST IDEA IS NOT USE CRYPTOPP FOR THINGS LIKE IT BECAUSE OF EASY REVERSE ENGINEERING
+
+	CryptoPP::SecureWipeBuffer(decrypted_key, 32);
 
 	if (file_size < sizeof(TPackFileHeader) + m_header.entry_num * sizeof(TPackFileEntry)) {
 		return false;
 	}
-
 	for (size_t i = 0; i < m_header.entry_num; i++) {
 		TPackFileEntry entry;
 		memcpy(&entry, m_file.data() + sizeof(TPackFileHeader) + i * sizeof(TPackFileEntry), sizeof(TPackFileEntry));
@@ -33,11 +37,10 @@ bool CPack::Open(const std::string& path, TPackFileMap& entries)
 			return false;
 		}
 	}
-
 	return true;
 }
 
-bool CPack::GetFile(const TPackFileEntry& entry, TPackFile& result)
+bool CPack::GetFile(const TPackFileEntry& entry, TPackFile& result)	
 {
 	result.resize(entry.file_size);
 
