@@ -18,7 +18,7 @@ public:
 	void SetFileLoadMode() { m_load_from_pack = false; }
 
 private:
-	void NormalizePath(std::string_view in, std::string& out) const;
+	PACK_FORCEINLINE void NormalizePath(std::string_view in, std::string& out) const;
 
 private:
 	bool m_load_from_pack = true;
