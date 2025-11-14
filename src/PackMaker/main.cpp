@@ -76,11 +76,15 @@ int main(int argc, char* argv[])
 	CryptoPP::AutoSeededRandomPool rnd;
 	rnd.GenerateBlock(header.iv, sizeof(header.iv));
 
+	alignas(32) uint8_t decrypted_key[32];
+	memcpy(decrypted_key, PACK_KEY.data(), 32);
+	compiletime_key_generation::decrypt_key<32>(decrypted_key, PACK_SEED_HASH);
+
 	ofs.write((const char*) &header, sizeof(header));
 	ofs.seekp(header.data_begin, std::ios::beg);
 
-	CryptoPP::CTR_Mode<CryptoPP::Camellia>::Encryption encryption;
-	encryption.SetKeyWithIV(PACK_KEY.data(), PACK_KEY.size(), header.iv, CryptoPP::Camellia::BLOCKSIZE);
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption encryption;
+	encryption.SetKeyWithIV(decrypted_key, 32, header.iv, CryptoPP::AES::BLOCKSIZE);
 
 	uint64_t offset = 0;
 	for (auto& [path, entry] : entries) {
@@ -111,7 +115,8 @@ int main(int argc, char* argv[])
 		entry.offset = offset;
 
 		entry.encryption = 0;
-		if (path.has_extension() && path.extension() == ".py") {
+		if (path.has_extension() && path.extension() == ".py") { //add more extensions or uncomment  \/ :)
+			//if (path.has_extension() && !(path.extension() == ".wav" || path.extension() == ".mp3")) {
 			entry.encryption = 1;
 
 			rnd.GenerateBlock(entry.iv, sizeof(entry.iv));
