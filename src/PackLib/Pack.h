@@ -17,5 +17,5 @@ private:
 	TPackFileHeader m_header;
 	mio::mmap_source m_file;
 
-	CryptoPP::CTR_Mode<CryptoPP::Camellia>::Decryption m_decryption;
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption m_decryption;
 };
